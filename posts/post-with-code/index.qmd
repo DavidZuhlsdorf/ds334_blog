@@ -1,13 +1,132 @@
 ---
-title: "Post With Code"
-author: "Harlow Malloc"
+title: "Blog Post 1"
+author: "David Zuhlsdorf"
 date: "2026-01-28"
 categories: [news, code, analysis]
-image: "image.jpg"
 ---
 
-This is a post with executable code.
+### Introduction:
+
+The NFL MVP award is one of the highest achievements a professional football player can receive. The NFL MVP is decided by 50 media members (sports writers and broadcasters) all selected by the Associated Press. Although non-quarterbacks can win, it does not happen often. In this analysis, we looked at just quarterbacks so it was easier to compare. One of the most influential statistics used to measure a quarterbacks performance is QBR. QBR is a very complex statistics to calculate, so in this analysis we will not be using it but we will use variables that are used to calculate QBR. In this analysis we will use total season yards, touchdowns, expected points added (EPA), and season completion percentage to look at what quarterback is deserving of the MVP. For our data, we used a package called "nflverse" which includes a large amount of data from the NFL. The subset of data from this package that we used was called player_stats which gave us each player's individual game stats for each week of the 2025 NFL season.
 
 ```{r}
-1 + 1
+
+library(nflverse) 
+library(tidyverse)
+library(ggplot2)
+
+
+stat_df <- load_player_stats()
+
+# Need to clean data so we only have QBs in the 2025 regular season
+nfl_stat_clean <- stat_df %>%
+  filter(position == "QB",
+         season_type == "REG",
+         season == "2025") %>%
+# Need to select variables that will be used in analysis. NA values need to be replaced.
+  select(player_name,position, completions, attempts, passing_yards,passing_tds,rushing_tds, rushing_yards, passing_epa,rushing_epa, week)%>%
+  mutate(rushing_epa = replace_na(rushing_epa, 0),      
+         passing_epa = replace_na(passing_epa, 0))      
+
+# Make new variables that show the totals for each QB in each game
+nfl_stat_cleaner <- nfl_stat_clean %>%
+ mutate(total_yards = passing_yards + rushing_yards,
+         total_tds = passing_tds + rushing_tds,
+         total_epa = passing_epa + rushing_epa)
+
+# Now need to summarize to get our total season stats for each variable being used
+season_stats <- nfl_stat_cleaner %>%
+  group_by(player_name) %>%
+  summarize(season_tds = sum(total_tds),
+            season_yards = sum(total_yards),
+            season_epa = sum(total_epa),
+            total_cmp = sum(completions),
+            total_att = sum(attempts),) %>%
+  mutate(completion_pct = (total_cmp/total_att)*100) %>%
+  filter(total_att >= 238)    
+
+# filtered by amount of attempts because QBs that dont                                    play a lot can skew our data. 238 pass attempts is the                                  minimum for a QB to be considered for NFL leaderboards.
+  
+  
+           
+
 ```
+
+### Figure 1. QB Total Touchdowns vs. Total Yards
+
+```{r}
+# slice the data so it only shows the top 20 Qbs in touchdowns. Less clutter for graphs.
+t20_tds <- season_stats %>%
+  arrange(desc(season_tds)) %>%
+  slice(1:20)
+
+# Make scatter plot showing total season yards vs total season tds.
+ggplot(t20_tds, aes(x = season_yards, y = season_tds)) +
+  geom_point(aes(color = season_tds), size = 2) +
+  scale_color_distiller(type = "seq", palette = "Reds", direction = 1) +
+  labs(
+    title = "QB Total Touchdowns vs Total Yards",
+    x = "Total Yards",
+    y = "Total Touchdowns"
+  ) +
+  geom_text(aes(label = player_name), nudge_y = 0.75, size = 2.5) +
+  theme_minimal()
+```
+
+Looking at our scatterplot, we can see that 4 QBs stand out. Matthew Stafford, Drake Maye, Josh Allen, and Trevor Lawrence. The color scale is sequential, so QBs with more touchdowns will have a brighter point. Matthew Stafford leads the league significantly in touchdowns while Drake Maye leads the league in yards. As we can see, there is a postive correlation with total yards and total touchdowns but it is not perfect. Although Maye leads in yards, Stafford is not far behind and has significantly more touchdowns than Maye, showing that he produced more scores for his team. If we were looking at just these two stats, then Stafford would be considered a more deserving candidate for the MVP.
+
+### Figure 2. Top 10 QBs in Completion % in 2025
+
+```{r}
+# slice and filter to see top 10 Qbs in completion %
+t10_cmppct <- season_stats %>%
+  filter(total_att >= 238)%>%
+  arrange(desc(completion_pct)) %>%
+  slice(1:10) %>%
+  mutate(player_name = fct_reorder(player_name,completion_pct))
+
+# Make Lolliplop plot
+ggplot(t10_cmppct, aes(x = player_name,y = completion_pct)) +
+  geom_segment(aes(xend = player_name, y = 0, yend =  completion_pct
+                   ),
+               color = "red") +
+                 geom_point(color = "red") +
+ coord_flip() +
+  theme_minimal() +
+  labs(title = "Top 10 NFL QBs in Completion % in 2025",
+       x = "Player Name" ,
+       y ="Completion %" )
+  
+               
+```
+
+Looking at our lolliplop plot, we can see that the top 10 QBs in completion % are all pretty close. What is interesting about this plot is that Stafford is not in the top 10, while Maye leads the league. As we saw in our scatterplot before, Stafford was clearly an outlier in offensive production. This makes it harder to distinguish who is deserving of the MVP. Maye is at the top of both plots while Stafford is only at the top of one. This is where the award voters have to weigh each statistic and look at what it truly means to be an MVP.
+
+### Figure 3. Column Chart of QB's season EPA
+
+```{r}
+# Make a column chart showing every eligible QB's EPA for the entire season.
+season_stats %>%
+  arrange(desc(season_epa)) %>%
+  mutate(player_name = fct_reorder(player_name,season_epa)) %>%
+ggplot(.,aes(x = player_name, y = season_epa)) +
+  geom_col(aes(fill = season_epa)) +
+  coord_flip() +
+  scale_fill_distiller(type = "div", palette = "RdBu") +
+  theme_minimal()
+
+```
+
+This column chart ranks each eligible NFL QB based on their season EPA. It ranks from top to bottom, top being the highest, bottom being the lowest. The color scale also correlates with season EPA, red being higher, white in the middle, blue being lower. EPA measures how much each play increases or decreases the offense’s expected points compared to before the play. It essentially tells us how much a player contributes to scoring, but also how efficient they are. It captures efficiency and situational value rather than raw production. Loooking at the chart, we can see that Drake Maye leads pretty substantially. Looking at players we have seen in previous plots, we can see that Stafford is third, and Josh Allen is fourth.
+
+### Conclusion:
+
+After looking at these three figures, we can see that the top 2 candidates for the MVP are Drake Maye and Matthew Stafford. They are both very productive players and add significant value to their teams. If I were an award voter, and was basing my pick on just the figures presented here, my first place pick would be Drake Maye. He was 1st in 2 out of the 3 figures and was right at the top of the scatterplot. Although the statistics we looked at are significant in MVP decision making, they are not the only factors that go into who wins the award. Like I mentioned earlier, we were not able to look at QBR or calculate it which is a huge deciding statistic. We also didnt look at overall team performance, or who had better "offensive weapons". If I had more time and additional data, I would look at QBR, overall team performance, include non QB players, and also consider the voting system in which the 50 media members use which is a 5 player rank. I think that these factors could significantly change how we look at the top candidates for the NFL MVP.
+
+### Connection to Class:
+
+In the first few weeks of class, we have discussed what makes a figure effective, more appealing, and easy to read/interpret. In the first figure which was the scatterplot, I wanted the reader to be able to see who had the highest raw amount of offense. I used a sequential color scale like we talked about in class to highlight the significance of touchdowns. I also added text so the reader could see what player corresponded to each point. The second figure was simple but effective. In class, we talked about how sometimes simplicity is better because it can be easier to interpret. I think the lolliplop plot was a perfect figure for ranking players based on a numerical variable, specifically completion percentage. Lastly, the third plot put it all together. We used a column chart to rank a categorical variable based on a numerical variable, in this case, season EPA. We then used a diverging color scale because we had values that were on both sides of zero. The color scale makes it easier for the reader to interpret and also has an appealing look to it.
+
+### Partner:
+
+Baxter Lowell
