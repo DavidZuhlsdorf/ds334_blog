@@ -1,8 +1,8 @@
 ---
-title: "index"
+title: "Blog Post 2"
 author: "David Zuhlsdorf"
-format: html
-embed-resources: true
+date: "2026-02-18"
+categories: [news, code, analysis]
 ---
 
 ### Introduction:
@@ -16,7 +16,7 @@ library(tidyverse)
 
 ```{r}
 # Clean data and create a count
-breweries <- read_csv("data/breweries.csv") 
+breweries <- read_csv(here::here("data/breweries.csv"))
 
 brew_count <- breweries %>%
   group_by(state) %>%
