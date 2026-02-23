@@ -3,6 +3,8 @@ title: "Blog Post 1"
 author: "David Zuhlsdorf"
 date: "2026-01-28"
 categories: [news, code, analysis]
+html:
+  embed-resources: true
 ---
 
 ### Introduction:
