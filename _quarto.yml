@@ -9,7 +9,7 @@ website:
       - about.qmd
       - icon: github
         href: https://davidzuhlsdorf.github.io/ds334_blog/
-        icon: linkedin
+      - icon: linkedin
         href: https://linkedin.com/in/david-zuhlsdorf-a7a369336
 
 format:
