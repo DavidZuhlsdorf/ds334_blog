@@ -39,7 +39,9 @@ ggplot(slu_d3mens_2019, aes(x = sports, y = exp_men)) +
   coord_flip() +
   scale_fill_viridis_c(direction = -1) +
   theme_minimal() +
-  labs(title = "St Lawrence Mens Sports Budget in 2019")
+  labs(title = "St Lawrence Mens Sports Budget in 2019",
+       x = "Sport",
+       y = "Expenses")
   
 ```
 
